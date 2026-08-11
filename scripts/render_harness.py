@@ -18,6 +18,9 @@ from typing import Any
 REPO_ROOT = Path(__file__).resolve().parents[1]
 LOCALS_TF = REPO_ROOT / "locals.tf"
 AGENTS_TF = REPO_ROOT / "agents.tf"
+HOST_MAIN_TF = REPO_ROOT / "modules" / "host" / "main.tf"
+HOST_EXISTING_SERVER_TF = REPO_ROOT / "modules" / "host" / "existing-server.tf"
+HOST_SCRIPT = REPO_ROOT / "modules" / "host" / "scripts" / "adopt-existing-server.sh"
 ANSI_RE = re.compile(r"\x1b\[[0-9;]*m")
 RENDER_SSH_AUTHORIZED_KEY = (
     "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKubeHetznerRenderHarness render-comment"
@@ -288,6 +291,22 @@ def assert_agent_private_ipv4_contract(scratch: "TerraformScratch") -> None:
         "agent private IPv4 contract",
         "v2 per-pool offsets are preserved; shared primary-agent offsets are unique across pools; external agents remain unpinned",
     )
+
+
+def assert_existing_server_contract() -> None:
+    """Protect the explicit existing-server adoption graph."""
+
+    host_configuration = "\n".join(
+        (
+            HOST_MAIN_TF.read_text(encoding="utf-8"),
+            HOST_EXISTING_SERVER_TF.read_text(encoding="utf-8"),
+        )
+    )
+    if "existing_server_id" not in host_configuration:
+        fail("existing server source contract", "host module does not propagate existing_server_id")
+    if "server rebuild" not in HOST_SCRIPT.read_text(encoding="utf-8"):
+        fail("existing server source contract", "adoption helper does not rebuild the server")
+    print_pass("existing server source contract", "existing server adoption graph is present")
 
 
 def assert_opensuse_ssh_cloudinit_contract() -> None:
@@ -1717,6 +1736,7 @@ def main() -> int:
         scratch = TerraformScratch(temp_dir, base_render_vars())
         assert_addon_default_versions()
         assert_agent_private_ipv4_contract(scratch)
+        assert_existing_server_contract()
         assert_opensuse_ssh_cloudinit_contract()
         assert_baked_selinux_package_contract()
         assert_kubernetes_artifact_architecture_contract()

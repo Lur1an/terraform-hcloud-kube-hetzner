@@ -21,6 +21,8 @@ variable "network" {
 }
 
 resource "hcloud_server" "server" {
+  count = var.existing_server_id == null ? 1 : 0
+
   name               = local.name
   image              = var.os_snapshot_id
   server_type        = var.server_type
@@ -70,9 +72,14 @@ resource "hcloud_server" "server" {
 
 }
 
+moved {
+  from = hcloud_server.server
+  to   = hcloud_server.server[0]
+}
+
 resource "terraform_data" "initial_readiness" {
   triggers_replace = {
-    server_id = hcloud_server.server.id
+    server_id = local.server_id
   }
 
   connection {
@@ -133,7 +140,7 @@ resource "terraform_data" "initial_readiness" {
 
 resource "terraform_data" "os_upgrade_timer" {
   triggers_replace = {
-    server_id                = hcloud_server.server.id
+    server_id                = local.server_id
     automatically_upgrade_os = tostring(var.automatically_upgrade_os)
   }
 
@@ -169,17 +176,17 @@ resource "terraform_data" "os_upgrade_timer" {
 }
 
 resource "hcloud_server_network" "extra_networks" {
-  for_each = {
+  for_each = var.existing_server_id == null ? {
     for network_id in local.extra_network_ids : tostring(network_id) => network_id
-  }
+  } : {}
 
-  server_id  = hcloud_server.server.id
+  server_id  = local.server_id
   network_id = each.value
 }
 
 resource "terraform_data" "ssh_authorized_keys" {
   triggers_replace = {
-    server_id                     = hcloud_server.server.id
+    server_id                     = local.server_id
     ssh_public_key                = sha1(var.ssh_public_key)
     ssh_additional_keys           = sha1(join("\n", var.ssh_additional_public_keys))
     ssh_authorized_keys_exclusive = tostring(var.ssh_authorized_keys_exclusive)
@@ -362,16 +369,16 @@ moved {
 resource "hcloud_rdns" "server" {
   count = (var.base_domain != "" && !var.disable_ipv4) ? 1 : 0
 
-  server_id  = hcloud_server.server.id
-  ip_address = coalesce(hcloud_server.server.ipv4_address, try(one(hcloud_server.server.network).ip, null))
+  server_id  = local.server_id
+  ip_address = coalesce(local.server_ipv4_address, try(one(local.server_networks).ip, null))
   dns_ptr    = format("%s.%s", local.name, var.base_domain)
 }
 
 resource "hcloud_rdns" "server_ipv6" {
   count = (var.base_domain != "" && !var.disable_ipv6) ? 1 : 0
 
-  server_id  = hcloud_server.server.id
-  ip_address = hcloud_server.server.ipv6_address
+  server_id  = local.server_id
+  ip_address = local.server_ipv6_address
   dns_ptr    = format("%s.%s", local.name, var.base_domain)
 }
 
@@ -500,7 +507,7 @@ moved {
 resource "terraform_data" "os_upgrade_toggle" {
   triggers_replace = {
     os_upgrade_state = var.automatically_upgrade_os ? "enabled" : "disabled"
-    server_id        = hcloud_server.server.id
+    server_id        = local.server_id
   }
 
   connection {

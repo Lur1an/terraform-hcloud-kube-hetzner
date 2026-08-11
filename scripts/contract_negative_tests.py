@@ -43,6 +43,18 @@ class Case:
 
 CASES = [
     Case(
+        name="bad-control-plane-existing-server-id",
+        var_file=FIXTURE_DIR / "bad-control-plane-existing-server-id.tfvars.fixture",
+        target="module.sut.terraform_data.validation_contract",
+        expected_substring="control_plane_nodepools nodes existing_server_id must be a positive integer",
+    ),
+    Case(
+        name="bad-agent-existing-server-id",
+        var_file=FIXTURE_DIR / "bad-agent-existing-server-id.tfvars.fixture",
+        target="module.sut.terraform_data.validation_contract",
+        expected_substring="agent_nodepools nodes existing_server_id must be a positive integer",
+    ),
+    Case(
         name="bad-ingress-annotations",
         var_file=FIXTURE_DIR / "bad-ingress-annotations.tfvars.fixture",
         target="module.sut.terraform_data.helm_values_yaml_contract",

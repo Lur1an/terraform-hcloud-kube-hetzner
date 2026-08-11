@@ -98,6 +98,9 @@ jobs:
       - name: Run render harness
         run: python3 scripts/render_harness.py
 
+      - name: Test existing-server adoption helper
+        run: python3 scripts/test_existing_server_adoption.py
+
       - name: Run negative contract tests (tokenless)
         run: python3 scripts/contract_negative_tests.py
 

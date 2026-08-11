@@ -944,6 +944,7 @@ variable "control_plane_nodepools" {
       delete_protection = optional(bool, null)
     })), [])
     nodes = optional(map(object({
+      existing_server_id    = optional(number, null)
       server_type           = optional(string)
       location              = optional(string)
       backups               = optional(bool)
@@ -1082,6 +1083,19 @@ variable "control_plane_nodepools" {
     ])
     # 154 because the private ip is derived from tonumber(key) + 101. See private_ipv4 in control_planes.tf
     error_message = "The key for each individual control plane node in a nodepool must be a stable integer in the range [0, 153] cast as a string."
+  }
+
+  validation {
+    condition = alltrue(flatten([
+      for control_plane_nodepool in var.control_plane_nodepools : [
+        for control_plane_node in values(coalesce(control_plane_nodepool.nodes, {})) :
+        control_plane_node.existing_server_id == null || (
+          control_plane_node.existing_server_id > 0 &&
+          control_plane_node.existing_server_id == floor(control_plane_node.existing_server_id)
+        )
+      ]
+    ]))
+    error_message = "control_plane_nodepools nodes existing_server_id must be a positive integer when set."
   }
 
   validation {
@@ -1233,6 +1247,7 @@ variable "agent_nodepools" {
       delete_protection = optional(bool, null)
     })), [])
     nodes = optional(map(object({
+      existing_server_id        = optional(number, null)
       server_type               = optional(string)
       location                  = optional(string)
       backups                   = optional(bool)
@@ -1397,6 +1412,19 @@ variable "agent_nodepools" {
     ])
     # 154 because the private ip is derived from tonumber(key) + 101. See private_ipv4 in agents.tf
     error_message = "The key for each individual node in a nodepool must be a stable integer in the range [0, 153] cast as a string."
+  }
+
+  validation {
+    condition = alltrue(flatten([
+      for agent_nodepool in var.agent_nodepools : [
+        for agent_node in values(coalesce(agent_nodepool.nodes, {})) :
+        agent_node.existing_server_id == null || (
+          agent_node.existing_server_id > 0 &&
+          agent_node.existing_server_id == floor(agent_node.existing_server_id)
+        )
+      ]
+    ]))
+    error_message = "agent_nodepools nodes existing_server_id must be a positive integer when set."
   }
 
   validation {

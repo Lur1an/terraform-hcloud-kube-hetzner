@@ -16,6 +16,19 @@ locals {
     length(coalesce(nodepool.nodes, {})) + coalesce(nodepool.count, 0)
   ]) : 0
 
+  validation_existing_server_ids = compact(concat(
+    flatten([
+      for nodepool in var.control_plane_nodepools : [
+        for node in values(coalesce(nodepool.nodes, {})) : node.existing_server_id
+      ]
+    ]),
+    flatten([
+      for nodepool in var.agent_nodepools : [
+        for node in values(coalesce(nodepool.nodes, {})) : node.existing_server_id
+      ]
+    ]),
+  ))
+
   validation_autoscaler_max_count = length(var.autoscaler_nodepools) > 0 ? sum([
     for nodepool in var.autoscaler_nodepools : nodepool.max_nodes
   ]) : 0

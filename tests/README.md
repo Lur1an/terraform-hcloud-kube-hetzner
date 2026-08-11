@@ -57,7 +57,18 @@ annotations at the chart-specific Service annotation path, Cilium values keep
 `routingMode` and `k8sServicePort` at the document root, cloud-init templates
 decode as YAML, rendered shell passes `bash -n`, and static-agent private IPv4
 allocation preserves the v2 per-nodepool formula while remaining unique across
-shared-subnet nodepools.
+shared-subnet nodepools. It also protects the `existing_server_id` schema,
+no-import adoption graph, one-time rebuild helper, and managed-server state move.
+
+The existing-server helper has a hermetic fake-CLI command test:
+
+```bash
+uv run python scripts/test_existing_server_adoption.py
+```
+
+It uses a stateful fake HCloud CLI to verify donor authorization, cloud-state
+preparation, exactly one rebuild, failed-placement power recovery, malformed
+command rejection, and retry authorization after partial adoption.
 
 When adding a new `*_values_default` heredoc or high-risk rendered template, add
 it to `scripts/render_harness.py` with a structure assertion instead of a large

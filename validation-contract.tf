@@ -7,6 +7,10 @@ resource "terraform_data" "validation_contract" {
   input = true
 
   lifecycle {
+    precondition {
+      condition     = length(local.validation_existing_server_ids) == length(distinct(local.validation_existing_server_ids))
+      error_message = "Each existing_server_id may be assigned to only one control-plane or agent node."
+    }
     # Shared subnet mode pins one dense IP per primary-network agent inside the
     # single shared agent subnet; the highest host offset must fit the subnet,
     # or cidrhost() would fail mid-plan with an opaque error (#2240 review).

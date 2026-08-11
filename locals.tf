@@ -1110,6 +1110,7 @@ EOT
       for node_index in range(coalesce(nodepool_obj.count, 0)) :
       format("%s-%s-%s", pool_index, node_index, nodepool_obj.name) => {
         nodepool_name : nodepool_obj.name,
+        existing_server_id : null,
         server_type : nodepool_obj.server_type,
         location : nodepool_obj.location,
         labels : concat(local.default_control_plane_labels, nodepool_obj.swap_size != "" || nodepool_obj.zram_size != "" ? local.swap_node_label : [], nodepool_obj.labels),
@@ -1149,6 +1150,7 @@ EOT
       format("%s-%s-%s", pool_index, node_key, nodepool_obj.name) => merge(
         {
           nodepool_name : nodepool_obj.name,
+          existing_server_id : null,
           server_type : nodepool_obj.server_type,
           append_random_suffix : nodepool_obj.append_random_suffix,
           location : nodepool_obj.location,
@@ -1212,6 +1214,7 @@ EOT
       for node_index in range(coalesce(nodepool_obj.count, 0)) :
       format("%s-%s-%s", pool_index, node_index, nodepool_obj.name) => {
         nodepool_name : nodepool_obj.name,
+        existing_server_id : null,
         server_type : nodepool_obj.server_type,
         longhorn_volume_size : coalesce(nodepool_obj.longhorn_volume_size, 0),
         longhorn_mount_path : nodepool_obj.longhorn_mount_path,
@@ -1257,6 +1260,7 @@ EOT
       format("%s-%s-%s", pool_index, node_key, nodepool_obj.name) => merge(
         {
           nodepool_name : nodepool_obj.name,
+          existing_server_id : null,
           server_type : nodepool_obj.server_type,
           longhorn_volume_size : coalesce(nodepool_obj.longhorn_volume_size, 0),
           longhorn_mount_path : nodepool_obj.longhorn_mount_path,

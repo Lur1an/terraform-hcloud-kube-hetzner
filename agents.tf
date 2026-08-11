@@ -41,6 +41,7 @@ module "agents" {
 
   name                          = "${var.use_cluster_name_in_node_name ? "${var.cluster_name}-" : ""}${each.value.nodepool_name}${try(each.value.node_name_suffix, "")}"
   append_random_suffix          = each.value.append_random_suffix
+  existing_server_id            = each.value.existing_server_id
   connection_host               = ""
   connection_host_suffix        = local.tailscale_pre_terraform_ssh_enabled ? local.tailscale_magicdns_domain : ""
   os_snapshot_id                = try(trimspace(each.value.os_snapshot_id), "") != "" ? trimspace(each.value.os_snapshot_id) : local.snapshot_id_by_os[each.value.os][substr(each.value.server_type, 0, 3) == "cax" ? "arm" : "x86"]

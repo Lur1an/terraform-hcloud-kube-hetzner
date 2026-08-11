@@ -9,6 +9,12 @@ variable "append_random_suffix" {
   default     = true
 }
 
+variable "existing_server_id" {
+  description = "Existing Hetzner Cloud server ID to wipe, rebuild, and manage as this host. Null creates a new server."
+  type        = number
+  default     = null
+}
+
 variable "connection_host" {
   description = "Optional SSH host override used for Terraform provisioners."
   type        = string

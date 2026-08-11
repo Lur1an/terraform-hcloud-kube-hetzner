@@ -247,6 +247,17 @@ module "kube-hetzner" {
   # - Existing nodepools keep their current OS on upgrade (MicroOS by default) unless you set `os`.
   # Set `os` per nodepool (and optionally per node in `agent_nodepools[].nodes`).
 
+  # Existing server reuse (destructive): replace `count` with an explicit `nodes`
+  # map and set `existing_server_id` on a node to wipe/rebuild that Hetzner server
+  # with the selected kube-hetzner snapshot. No Terraform import is required.
+  # The donor's location/server_type must match, protections must be disabled,
+  # attached Volumes/Floating IPs must be removed, and the donor must have the
+  # Hetzner label kube-hetzner-reuse=allowed. Destroying the cluster deletes the
+  # adopted server. See docs/reuse-existing-servers.md.
+  # nodes = {
+  #   "0" = { existing_server_id = 12345678 }
+  # }
+
   # * Example below:
 
   control_plane_nodepools = [
@@ -374,6 +385,13 @@ module "kube-hetzner" {
       # Optionally pin this nodepool to pre-existing Primary IP IDs.
       # primary_ipv4_id = 123456
       # primary_ipv6_id = 123457
+
+      # To reuse existing servers, replace count with a nodes map. Entries
+      # without existing_server_id continue to create normal new servers:
+      # nodes = {
+      #   "0" = { existing_server_id = 12345678 }
+      #   "1" = {}
+      # }
 
       # In node_transport_mode = "tailscale", every active agent nodepool must
       # set network_scope explicitly so Terraform can validate the topology at plan time:
