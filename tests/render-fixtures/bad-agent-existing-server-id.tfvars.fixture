@@ -1,0 +1,15 @@
+agent_nodepools = [
+  {
+    name        = "agent"
+    server_type = "cx23"
+    location    = "nbg1"
+    labels      = []
+    taints      = []
+    nodes = {
+      "0" = {
+        existing_server_id = -1
+      }
+    }
+    os = "leapmicro"
+  }
+]

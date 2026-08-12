@@ -20,7 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### 🚀 New Features
 
 - Static control-plane and agent nodes now advertise dual-stack `node-ip` values that match configured cluster CIDR families, making the existing Cilium IPv6 CIDR inputs plan-validated on the standard private-network topology where validation passes (#2170, #2244, #2245; thanks @mgazza, @bkero).
-- **Existing Hetzner Server Reuse** - Static control-plane and agent `nodes` entries can set `existing_server_id` to import and destructively rebuild an allocated server without changing its ID or legacy pricing.
+- **Existing Hetzner Server Reuse** - Static control-plane and agent `nodes` entries can set `existing_server_id` to destructively rebuild an explicitly selected donor after importing it into that node's normal `hcloud_server` address. Removing the temporary ID after adoption preserves both the resource address and physical server ID; the official HCloud provider manages its subsequent lifecycle. Requires Bash, `hcloud` CLI 1.67.0+, and `jq` for the adoption apply.
 
 ### 🐛 Bug Fixes
 

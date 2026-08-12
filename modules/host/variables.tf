@@ -10,7 +10,7 @@ variable "append_random_suffix" {
 }
 
 variable "existing_server_id" {
-  description = "Existing Hetzner Cloud server ID to wipe, rebuild, and manage as this host. Null creates a new server."
+  description = "Existing Hetzner Cloud server ID imported into hcloud_server.server before a one-time destructive rebuild. Remove after adoption; null uses the normal managed-server lifecycle."
   type        = number
   default     = null
 }

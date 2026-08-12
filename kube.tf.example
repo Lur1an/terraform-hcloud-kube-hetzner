@@ -248,12 +248,14 @@ module "kube-hetzner" {
   # Set `os` per nodepool (and optionally per node in `agent_nodepools[].nodes`).
 
   # Existing server reuse (destructive): replace `count` with an explicit `nodes`
-  # map and set `existing_server_id` on a node to wipe/rebuild that Hetzner server
-  # with the selected kube-hetzner snapshot. No Terraform import is required.
+  # map, set `existing_server_id`, and import that server into the node's normal
+  # hcloud_server.server address before applying. The adoption apply wipes and
+  # rebuilds it with the selected kube-hetzner snapshot. Applying before import
+  # creates a different server, so follow docs/reuse-existing-servers.md exactly.
   # The donor's location/server_type must match, protections must be disabled,
-  # attached Volumes/Floating IPs must be removed, and the donor must have the
-  # Hetzner label kube-hetzner-reuse=allowed. Destroying the cluster deletes the
-  # adopted server. See docs/reuse-existing-servers.md.
+  # and attached Volumes/Floating IPs must be removed. The explicit ID plus
+  # import authorizes the destructive rebuild. Destroying the cluster deletes
+  # the adopted server. See docs/reuse-existing-servers.md.
   # nodes = {
   #   "0" = { existing_server_id = 12345678 }
   # }
@@ -386,8 +388,9 @@ module "kube-hetzner" {
       # primary_ipv4_id = 123456
       # primary_ipv6_id = 123457
 
-      # To reuse existing servers, replace count with a nodes map. Entries
-      # without existing_server_id continue to create normal new servers:
+      # To reuse an existing server, replace count with a nodes map, configure
+      # the temporary ID, then import it before applying. Remove the ID after
+      # the node joins; the normal hcloud_server remains managed:
       # nodes = {
       #   "0" = { existing_server_id = 12345678 }
       #   "1" = {}

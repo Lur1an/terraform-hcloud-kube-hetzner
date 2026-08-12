@@ -39,7 +39,7 @@ A highly optimized, easy-to-use, auto-upgradable Kubernetes cluster powered by k
 - **Production-ready Kubernetes on Hetzner Cloud:** highly optimized, easy to maintain, secure, and automatically upgrades both nodes and Kubernetes.
 - **k3s default, RKE2 supported:** k3s is the lightweight default; RKE2 is a first-class Kubernetes distribution choice in this module.
 - **HA and autoscaling:** odd control-plane quorum, static agent pools, Cluster Autoscaler nodepools, and the exhaustive `kube.tf.example` showcase are documented together.
-- **Existing server reuse:** explicit per-node `existing_server_id` can wipe and rebuild already allocated servers without giving up their IDs or legacy pricing.
+- **Existing server reuse:** import an allocated server into an explicit node, then use `existing_server_id` once to wipe and join it without giving up its ID or legacy pricing.
 - **Private networking and NAT:** Hetzner private networking, private control-plane load balancers, NAT router patterns, and narrowed SSH/API firewall sources are supported.
 - **Leap Micro first:** new nodes default to openSUSE Leap Micro; MicroOS remains supported for upgrades/legacy nodes.
 - **Upgrade automation:** Kured handles HA-aware OS reboots; system-upgrade-controller manages k3s upgrades.
@@ -123,7 +123,7 @@ The biggest release in kube-hetzner history: months of hardening, every flagship
 
 > **Required tools:** [Terraform](https://learn.hashicorp.com/tutorials/terraform/install-cli) or [OpenTofu](https://opentofu.org/docs/intro/install/) >= 1.10.1 (`brew install opentofu`), [Packer](https://developer.hashicorp.com/packer/tutorials/docker-get-started/get-started-install-cli#installing-packer) = 1.16.0 for image builds, [kubectl](https://kubernetes.io/docs/tasks/tools/), and [hcloud](https://github.com/hetznercloud/cli). The module requires `hetznercloud/hcloud` provider >= 1.62.0.
 
-Reusing a server through `existing_server_id` additionally requires Bash, `hcloud` CLI >= 1.67.0, and `jq` on the Terraform/OpenTofu runner.
+Reusing a server through `existing_server_id` additionally requires an explicit `terraform import`/`tofu import`, Bash, `hcloud` CLI >= 1.67.0, `jq`, and `HCLOUD_TOKEN` for the adoption apply. Follow [`docs/reuse-existing-servers.md`](docs/reuse-existing-servers.md); applying before import creates a different server.
 
 OpenTofu is officially supported. Pull requests are validated in CI with both Terraform and OpenTofu, including real Hetzner preset apply/health/destroy tests when Hetzner E2E is enabled.
 

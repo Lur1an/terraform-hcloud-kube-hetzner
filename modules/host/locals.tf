@@ -19,31 +19,27 @@ locals {
     if network_id != var.primary_network_key
   ])
 
-  server_id = coalesce(
-    try(hcloud_server.server[0].id, null),
-    try(data.hcloud_server.existing_ready[0].id, null),
+  existing_server_adoption_token = try(random_uuid.existing_server_adoption[0].result, null)
+  existing_server_labels = var.existing_server_id == null ? var.labels : merge(
+    var.labels,
+    { "kube-hetzner-adoption" = local.existing_server_adoption_token },
   )
-  server_name = var.existing_server_id == null ? hcloud_server.server[0].name : local.name
-  server_ipv4_address = var.existing_server_id == null ? hcloud_server.server[0].ipv4_address : try(
-    data.hcloud_server.existing_ready[0].ipv4_address,
+  existing_server_adoption_completed = var.existing_server_id != null && try(
+    data.hcloud_server.existing[0].labels["kube-hetzner-adoption"] == local.existing_server_adoption_token,
+    false,
+  )
+  server_placement_group_id = var.existing_server_id != null && !local.existing_server_adoption_completed ? try(
+    data.hcloud_server.existing[0].placement_group_id,
     null,
-  )
-  server_ipv6_address = var.existing_server_id == null ? hcloud_server.server[0].ipv6_address : try(
-    data.hcloud_server.existing_ready[0].ipv6_address,
-    null,
-  )
-  server_networks = var.existing_server_id == null ? hcloud_server.server[0].network : try(
-    data.hcloud_server.existing_ready[0].network,
-    [],
-  )
+  ) : var.placement_group_id
 
   existing_server_desired_state = {
-    server_id          = var.existing_server_id
+    server_id          = tonumber(hcloud_server.server.id)
     name               = local.name
     location           = var.location
     server_type        = var.server_type
     image_id           = var.os_snapshot_id
-    labels             = merge(var.labels, { "kube-hetzner-adoption" = random_uuid.existing_server_adoption[0].result })
+    labels             = local.existing_server_labels
     backups            = var.backups
     firewall_ids       = sort(tolist(local.effective_firewall_ids))
     placement_group_id = var.placement_group_id
@@ -64,11 +60,11 @@ locals {
   }
 
   default_connection_host = coalesce(
-    local.server_ipv4_address,
-    local.server_ipv6_address,
+    hcloud_server.server.ipv4_address,
+    hcloud_server.server.ipv6_address,
     try(
-      [for network in local.server_networks : network.ip if var.network_id != null && network.network_id == var.network_id][0],
-      try([for network in local.server_networks : network.ip][0], null)
+      [for network in hcloud_server.server.network : network.ip if var.network_id != null && network.network_id == var.network_id][0],
+      try([for network in hcloud_server.server.network : network.ip][0], null)
     )
   )
 

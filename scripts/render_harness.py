@@ -18,7 +18,11 @@ from typing import Any
 REPO_ROOT = Path(__file__).resolve().parents[1]
 LOCALS_TF = REPO_ROOT / "locals.tf"
 AGENTS_TF = REPO_ROOT / "agents.tf"
+CONTROL_PLANES_TF = REPO_ROOT / "control_planes.tf"
+VARIABLES_TF = REPO_ROOT / "variables.tf"
 HOST_MAIN_TF = REPO_ROOT / "modules" / "host" / "main.tf"
+HOST_LOCALS_TF = REPO_ROOT / "modules" / "host" / "locals.tf"
+HOST_OUTPUTS_TF = REPO_ROOT / "modules" / "host" / "out.tf"
 HOST_EXISTING_SERVER_TF = REPO_ROOT / "modules" / "host" / "existing-server.tf"
 HOST_SCRIPT = REPO_ROOT / "modules" / "host" / "scripts" / "adopt-existing-server.sh"
 ANSI_RE = re.compile(r"\x1b\[[0-9;]*m")
@@ -294,19 +298,78 @@ def assert_agent_private_ipv4_contract(scratch: "TerraformScratch") -> None:
 
 
 def assert_existing_server_contract() -> None:
-    """Protect the explicit existing-server adoption graph."""
+    """Protect imported-server ownership and one-time destructive adoption."""
 
+    variables_source = normalize_hcl(VARIABLES_TF.read_text(encoding="utf-8"))
+    locals_source = normalize_hcl(LOCALS_TF.read_text(encoding="utf-8"))
+    agents_source = normalize_hcl(AGENTS_TF.read_text(encoding="utf-8"))
+    control_planes_source = normalize_hcl(CONTROL_PLANES_TF.read_text(encoding="utf-8"))
     host_configuration = "\n".join(
         (
             HOST_MAIN_TF.read_text(encoding="utf-8"),
+            HOST_LOCALS_TF.read_text(encoding="utf-8"),
+            HOST_OUTPUTS_TF.read_text(encoding="utf-8"),
             HOST_EXISTING_SERVER_TF.read_text(encoding="utf-8"),
         )
     )
-    if "existing_server_id" not in host_configuration:
-        fail("existing server source contract", "host module does not propagate existing_server_id")
-    if "server rebuild" not in HOST_SCRIPT.read_text(encoding="utf-8"):
-        fail("existing server source contract", "adoption helper does not rebuild the server")
-    print_pass("existing server source contract", "existing server adoption graph is present")
+    host_source = normalize_hcl(host_configuration)
+    host_outputs_source = normalize_hcl(HOST_OUTPUTS_TF.read_text(encoding="utf-8"))
+    script_source = HOST_SCRIPT.read_text(encoding="utf-8")
+
+    required_fragments = {
+        "variables": ("existing_server_id=optional(number,null)",),
+        "locals": ("existing_server_id:null",),
+        "agents": ("existing_server_id=each.value.existing_server_id",),
+        "control planes": ("existing_server_id=each.value.existing_server_id",),
+        "host": (
+            'resource"hcloud_server""server"',
+            "labels=var.existing_server_id==null?var.labels:(local.existing_server_adoption_completed?local.existing_server_labels:var.labels)",
+            'data"hcloud_server""existing"',
+            'resource"terraform_data""adopt_existing_server"',
+            "server_id=tonumber(hcloud_server.server.id)",
+            "tonumber(hcloud_server.server.id)==var.existing_server_id",
+            "depends_on=[hcloud_server.server,hcloud_server_network.extra_networks]",
+            "network.network_id==var.network_id",
+            '!contains(keys(var.labels),"kube-hetzner-adoption")',
+        ),
+    }
+    sources = {
+        "variables": variables_source,
+        "locals": locals_source,
+        "agents": agents_source,
+        "control planes": control_planes_source,
+        "host": host_source,
+    }
+    for name, fragments in required_fragments.items():
+        missing = [fragment for fragment in fragments if fragment not in sources[name]]
+        if missing:
+            fail("existing server source contract", f"{name} missing fragments: {missing!r}")
+
+    if "import {" in host_configuration:
+        fail("existing server source contract", "the child module must not require Terraform import blocks")
+    forbidden_fragments = (
+        "count=var.existing_server_id==null?1:0",
+        "hcloudserverdelete",
+        "existing_ready",
+        "to=hcloud_server.server[0]",
+    )
+    present = [fragment for fragment in forbidden_fragments if fragment in host_source]
+    if present:
+        fail("existing server source contract", f"host retains split ownership fragments: {present!r}")
+    if "one(hcloud_server.server.network)" in host_outputs_source:
+        fail("existing server source contract", "private IPv4 output must select the primary network by ID")
+
+    rebuild_index = script_source.find("hcloud server rebuild")
+    adoption_marker_index = script_source.find('hcloud server add-label --label "$key=$value"')
+    if rebuild_index < 0 or adoption_marker_index < rebuild_index:
+        fail("existing server source contract", "the helper must publish adoption labels only after rebuild succeeds")
+    if "kube-hetzner-reuse" in host_configuration or "kube-hetzner-reuse" in script_source:
+        fail("existing server source contract", "manual import must be the only destructive adoption authorization")
+
+    print_pass(
+        "existing server source contract",
+        "manual import establishes provider ownership before one-time rebuild; removing the ID cannot replace the server",
+    )
 
 
 def assert_opensuse_ssh_cloudinit_contract() -> None:

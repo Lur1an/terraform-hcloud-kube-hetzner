@@ -451,11 +451,12 @@ The subsequent sections on `control_plane_nodepools` and `agent_nodepools` are e
       * If `false`, disables the public IPv4 or IPv6 interface on the server, respectively.
       * **Warning:** If both are `false`, the server will *only* have a private IP address and will only be accessible via the Hetzner private network (e.g., from another server in the same network, or via a VPN/bastion host connected to that network). This is an advanced setup requiring careful network planning. The comment refers to a `README.md` section "Use only private IPs in your cluster" for guidance.
     * **`nodes[*].existing_server_id` (Positive Integer, Optional):**
-      * Reuses a specific existing Hetzner Cloud server instead of creating a new one for that logical node. Available only inside explicit `nodes` maps.
-      * The first apply destructively rebuilds the donor's root disk from the selected kube-hetzner snapshot and rendered cloud-init. No Terraform import is required.
-      * The donor must first have Hetzner label `kube-hetzner-reuse=allowed`. The configured `location` and `server_type` must match; delete/rebuild protection must be disabled; attached Volumes and Floating IPs must be removed.
-      * Server-level HCloud settings are prepared once during adoption, not continuously reconciled. The adopted server then follows the normal host and Kubernetes pipeline. Removing the node or destroying the cluster deletes it.
-      * Requires Bash, `hcloud` CLI 1.67.0 or newer, and `jq` where Terraform/OpenTofu runs. See [`docs/reuse-existing-servers.md`](reuse-existing-servers.md).
+      * Destructively rebuilds a specific existing Hetzner Cloud server as that logical node. Available only inside explicit `nodes` maps.
+      * Before applying, import the donor into the node's normal nested `hcloud_server.server` address with `terraform import` or `tofu import`. Applying first creates a different server.
+      * The adoption apply rebuilds the donor's root disk from the selected kube-hetzner snapshot and rendered cloud-init. Remove `existing_server_id` after the node is healthy; the imported resource and physical server remain unchanged under the official provider.
+      * Setting the ID and importing that exact donor into the documented resource address authorizes the destructive rebuild; no separate Hetzner label is required. The configured `location` and `server_type` must match; delete/rebuild protection must be disabled; attached Volumes and Floating IPs must be removed.
+      * The adopted server follows the normal provider-managed host and Kubernetes lifecycle. Removing the logical node or destroying the cluster deletes it.
+      * Requires Bash, `hcloud` CLI 1.67.0 or newer, `jq`, and `HCLOUD_TOKEN` for the adoption apply. See [`docs/reuse-existing-servers.md`](reuse-existing-servers.md).
 
 The example shows three control plane nodepools, each with one node, in different locations (`fsn1`, `nbg1`, `hel1`). This is a common pattern for a 3-node HA control plane, maximizing fault tolerance across Hetzner locations (within the same `network_region`).
 
@@ -603,7 +604,7 @@ The example shows three control plane nodepools, each with one node, in differen
         * Node `"1"`: Overrides `location` to `fsn1` and adds specific `labels`. It will use the default `cax21` server type.
         * Node `"20"`: Uses default `location` (`nbg1`) and `server_type` (`cax21`) but has its own specific `labels`.
       * **Benefit:** Useful when you need slight variations for a few nodes within a larger, mostly homogeneous pool, without creating many separate small nodepool definitions.
-      * **Existing Server Reuse:** Set `existing_server_id` on an explicitly marked donor to wipe and adopt it once without Terraform import. Entries without it are created normally. The destructive prerequisites and one-time lifecycle are documented in [`docs/reuse-existing-servers.md`](reuse-existing-servers.md).
+      * **Existing Server Reuse:** Set `existing_server_id` on an explicitly marked donor, import it into the documented nested resource address, and apply once to wipe and join it. Remove the ID afterward; provider ownership remains. Entries without it are created normally. See [`docs/reuse-existing-servers.md`](reuse-existing-servers.md).
 
 ---
 

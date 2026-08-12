@@ -58,7 +58,8 @@ annotations at the chart-specific Service annotation path, Cilium values keep
 decode as YAML, rendered shell passes `bash -n`, and static-agent private IPv4
 allocation preserves the v2 per-nodepool formula while remaining unique across
 shared-subnet nodepools. It also protects the `existing_server_id` schema,
-no-import adoption graph, one-time rebuild helper, and managed-server state move.
+provider-owned singleton server graph, import identity gate, and one-time rebuild
+helper. Removing the temporary ID cannot change the managed server address.
 
 The existing-server helper has a hermetic fake-CLI command test:
 
@@ -66,9 +67,9 @@ The existing-server helper has a hermetic fake-CLI command test:
 uv run python scripts/test_existing_server_adoption.py
 ```
 
-It uses a stateful fake HCloud CLI to verify donor authorization, cloud-state
-preparation, exactly one rebuild, failed-placement power recovery, malformed
-command rejection, and retry authorization after partial adoption.
+It uses a stateful fake HCloud CLI to verify cloud-state preparation, exactly
+one rebuild, post-rebuild idempotency marking, malformed command rejection, and
+power recovery after partial adoption or rebuild failure.
 
 When adding a new `*_values_default` heredoc or high-risk rendered template, add
 it to `scripts/render_harness.py` with a structure assertion instead of a large
